@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func testCommands() []PaletteCommand {
@@ -38,7 +38,7 @@ func TestNewPalette(t *testing.T) {
 
 func TestPaletteEscCancels(t *testing.T) {
 	p := NewPalette(80, 24, testCommands())
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	if cmd == nil {
 		t.Fatal("expected command from esc key")
 	}
@@ -57,9 +57,9 @@ func TestPaletteEnterSelectsAction(t *testing.T) {
 	p := NewPalette(80, 24, cmds)
 
 	// Move cursor down to second item
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
+	p, _ = p.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected command from enter key")
 	}
@@ -81,13 +81,13 @@ func TestPaletteEnterEmptyFilterCancels(t *testing.T) {
 
 	// Type something that matches nothing
 	for _, r := range "zzzzzzz" {
-		p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		p, _ = p.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 	}
 	if len(p.filtered) != 0 {
 		t.Fatalf("expected 0 filtered commands, got %d", len(p.filtered))
 	}
 
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected command from enter on empty list")
 	}
@@ -106,28 +106,28 @@ func TestPaletteNavigation(t *testing.T) {
 	p := NewPalette(80, 24, cmds)
 
 	t.Run("down moves cursor", func(t *testing.T) {
-		p2, _ := p.Update(tea.KeyMsg{Type: tea.KeyDown})
+		p2, _ := p.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		if p2.cursor != 1 {
 			t.Fatalf("expected cursor at 1, got %d", p2.cursor)
 		}
 	})
 
 	t.Run("up at top stays at 0", func(t *testing.T) {
-		p2, _ := p.Update(tea.KeyMsg{Type: tea.KeyUp})
+		p2, _ := p.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 		if p2.cursor != 0 {
 			t.Fatalf("expected cursor at 0, got %d", p2.cursor)
 		}
 	})
 
 	t.Run("ctrl+n moves down", func(t *testing.T) {
-		p2, _ := p.Update(tea.KeyMsg{Type: tea.KeyCtrlN})
+		p2, _ := p.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
 		if p2.cursor != 1 {
 			t.Fatalf("expected cursor at 1, got %d", p2.cursor)
 		}
 	})
 
 	t.Run("ctrl+p at top stays at 0", func(t *testing.T) {
-		p2, _ := p.Update(tea.KeyMsg{Type: tea.KeyCtrlP})
+		p2, _ := p.Update(tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl})
 		if p2.cursor != 0 {
 			t.Fatalf("expected cursor at 0, got %d", p2.cursor)
 		}
@@ -136,7 +136,7 @@ func TestPaletteNavigation(t *testing.T) {
 	t.Run("down clamps at last item", func(t *testing.T) {
 		p2 := p
 		for i := 0; i < len(cmds)+5; i++ {
-			p2, _ = p2.Update(tea.KeyMsg{Type: tea.KeyDown})
+			p2, _ = p2.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		}
 		if p2.cursor != len(cmds)-1 {
 			t.Fatalf("expected cursor clamped at %d, got %d", len(cmds)-1, p2.cursor)
@@ -159,7 +159,7 @@ func TestPaletteScrollOffset(t *testing.T) {
 
 	// Navigate down past visible window
 	for i := 0; i < paletteMaxVisible+2; i++ {
-		p, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
+		p, _ = p.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	}
 
 	if p.scrollOffset == 0 {
@@ -171,7 +171,7 @@ func TestPaletteScrollOffset(t *testing.T) {
 
 	// Navigate back up
 	for i := 0; i < paletteMaxVisible+2; i++ {
-		p, _ = p.Update(tea.KeyMsg{Type: tea.KeyUp})
+		p, _ = p.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	}
 	if p.scrollOffset != 0 {
 		t.Fatalf("expected scrollOffset back at 0, got %d", p.scrollOffset)
@@ -183,7 +183,7 @@ func TestPaletteFuzzyFilter(t *testing.T) {
 
 	// Type "focus" — should match "Toggle focus mode"
 	for _, r := range "focus" {
-		p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		p, _ = p.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 	}
 
 	if len(p.filtered) == 0 {
@@ -210,7 +210,7 @@ func TestPaletteFuzzyFilterClearRestores(t *testing.T) {
 
 	// Type to filter
 	for _, r := range "quit" {
-		p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		p, _ = p.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 	}
 	if len(p.filtered) >= len(cmds) {
 		t.Fatal("expected filtered list to be shorter than full list")
@@ -218,7 +218,7 @@ func TestPaletteFuzzyFilterClearRestores(t *testing.T) {
 
 	// Clear by backspacing
 	for i := 0; i < 4; i++ {
-		p, _ = p.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		p, _ = p.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	}
 
 	if len(p.filtered) != len(cmds) {
@@ -238,8 +238,8 @@ func TestPaletteSelectedNameDefault(t *testing.T) {
 func TestPaletteSelectedNameAfterNavigation(t *testing.T) {
 	cmds := testCommands()
 	p := NewPalette(80, 24, cmds)
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
+	p, _ = p.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	p, _ = p.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	name := p.SelectedName()
 	if name != cmds[2].Name {
 		t.Fatalf("expected %q at cursor 2, got %q", cmds[2].Name, name)

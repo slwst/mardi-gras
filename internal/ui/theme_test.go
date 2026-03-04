@@ -1,17 +1,16 @@
 package ui
 
 import (
+	"image/color"
 	"strings"
 	"testing"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 func TestPriorityColor(t *testing.T) {
 	tests := []struct {
 		name     string
 		priority int
-		want     lipgloss.Color
+		want     color.Color
 	}{
 		{"P0", 0, PrioP0},
 		{"P1", 1, PrioP1},
@@ -36,7 +35,7 @@ func TestIssueTypeColor(t *testing.T) {
 	tests := []struct {
 		name      string
 		issueType string
-		want      lipgloss.Color
+		want      color.Color
 	}{
 		{"bug", "bug", ColorBug},
 		{"feature", "feature", ColorFeature},
@@ -61,7 +60,7 @@ func TestAgentStateColor(t *testing.T) {
 	tests := []struct {
 		name  string
 		state string
-		want  lipgloss.Color
+		want  color.Color
 	}{
 		{"working", "working", StateWorking},
 		{"spawning", "spawning", StateSpawn},
@@ -88,7 +87,7 @@ func TestAgentStateColor(t *testing.T) {
 
 func TestAgentStateColorDistinctCategories(t *testing.T) {
 	// Each state category should map to a distinct color
-	colors := map[string]lipgloss.Color{
+	colors := map[string]color.Color{
 		"working":       AgentStateColor("working"),
 		"spawning":      AgentStateColor("spawning"),
 		"idle":          AgentStateColor("idle"),

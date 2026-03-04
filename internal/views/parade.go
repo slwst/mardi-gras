@@ -2,10 +2,11 @@ package views
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 	"github.com/matt-wright86/mardi-gras/internal/gastown"
@@ -17,7 +18,7 @@ type paradeSection struct {
 	Title  string
 	Symbol string
 	Style  lipgloss.Style
-	Color  lipgloss.Color
+	Color  color.Color
 	Status data.ParadeStatus
 }
 
@@ -553,7 +554,7 @@ func statusSymbol(issue *data.Issue, issueMap map[string]*data.Issue, blockingTy
 	}
 }
 
-func statusColor(issue *data.Issue, issueMap map[string]*data.Issue, blockingTypes map[string]bool) lipgloss.Color {
+func statusColor(issue *data.Issue, issueMap map[string]*data.Issue, blockingTypes map[string]bool) color.Color {
 	switch issue.Status {
 	case data.StatusClosed:
 		return ui.StatusPassed

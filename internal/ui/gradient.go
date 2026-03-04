@@ -4,9 +4,17 @@ import (
 	"math"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"image/color"
+
+	"charm.land/lipgloss/v2"
 	"github.com/lucasb-eyer/go-colorful"
 )
+
+// toColorful converts a color.Color to a go-colorful Color for gradient blending.
+func toColorful(c color.Color) colorful.Color {
+	cf, _ := colorful.MakeColor(c)
+	return cf
+}
 
 // ApplyMardiGrasGradient applies a smooth Purple -> Gold -> Green gradient to the text.
 func ApplyMardiGrasGradient(text string) string {
@@ -16,9 +24,9 @@ func ApplyMardiGrasGradient(text string) string {
 		return ""
 	}
 
-	c1, _ := colorful.Hex(string(Purple))
-	c2, _ := colorful.Hex(string(Gold))
-	c3, _ := colorful.Hex(string(Green))
+	c1 := toColorful(Purple)
+	c2 := toColorful(Gold)
+	c3 := toColorful(Green)
 
 	var b strings.Builder
 	for i, r := range runes {
@@ -49,9 +57,9 @@ func ApplyShimmerGradient(text string, offset float64) string {
 		return ""
 	}
 
-	c1, _ := colorful.Hex(string(Purple))
-	c2, _ := colorful.Hex(string(Gold))
-	c3, _ := colorful.Hex(string(Green))
+	c1 := toColorful(Purple)
+	c2 := toColorful(Gold)
+	c3 := toColorful(Green)
 
 	var b strings.Builder
 	for i, r := range runes {
@@ -93,9 +101,9 @@ func ApplyPartialMardiGrasGradient(text string, totalLength int) string {
 		return ""
 	}
 
-	c1, _ := colorful.Hex(string(Purple))
-	c2, _ := colorful.Hex(string(Gold))
-	c3, _ := colorful.Hex(string(Green))
+	c1 := toColorful(Purple)
+	c2 := toColorful(Gold)
+	c3 := toColorful(Green)
 
 	var b strings.Builder
 	for i, r := range runes {

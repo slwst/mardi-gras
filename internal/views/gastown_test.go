@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/matt-wright86/mardi-gras/internal/gastown"
 )
 
@@ -146,37 +146,37 @@ func TestGasTownAgentCursor(t *testing.T) {
 	}
 
 	// Move down
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.agentCursor != 1 {
 		t.Fatalf("after j, cursor = %d, want 1", g.agentCursor)
 	}
 
 	// Move down again
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.agentCursor != 2 {
 		t.Fatalf("after j j, cursor = %d, want 2", g.agentCursor)
 	}
 
 	// Can't go past end
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.agentCursor != 2 {
 		t.Fatalf("cursor should clamp at end, got %d", g.agentCursor)
 	}
 
 	// Move up
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	if g.agentCursor != 1 {
 		t.Fatalf("after k, cursor = %d, want 1", g.agentCursor)
 	}
 
 	// Jump to top
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if g.agentCursor != 0 {
 		t.Fatalf("after g, cursor = %d, want 0", g.agentCursor)
 	}
 
 	// Jump to bottom
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	if g.agentCursor != 2 {
 		t.Fatalf("after G, cursor = %d, want 2", g.agentCursor)
 	}
@@ -204,7 +204,7 @@ func TestGasTownSelectedAgent(t *testing.T) {
 	}
 
 	// Move to 1
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	a = g.SelectedAgent()
 	if a == nil || a.Name != "bravo" {
 		t.Fatalf("expected agent 'bravo', got %v", a)
@@ -219,7 +219,7 @@ func TestGasTownActionNudge(t *testing.T) {
 	status := &gastown.TownStatus{Agents: agents}
 	g.SetStatus(status, gastown.Env{Available: true})
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	if cmd == nil {
 		t.Fatal("expected cmd from nudge action")
 	}
@@ -244,7 +244,7 @@ func TestGasTownActionHandoff(t *testing.T) {
 	status := &gastown.TownStatus{Agents: agents}
 	g.SetStatus(status, gastown.Env{Available: true})
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	if cmd == nil {
 		t.Fatal("expected cmd from handoff action")
 	}
@@ -267,7 +267,7 @@ func TestGasTownActionDecommissionOnlyPolecat(t *testing.T) {
 	g.SetStatus(status, gastown.Env{Available: true})
 
 	// K on non-polecat should not produce a cmd
-	_, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'K'}})
+	_, cmd := g.Update(tea.KeyPressMsg{Code: 'K', Text: "K"})
 	if cmd != nil {
 		t.Fatal("expected no cmd for decommission on non-polecat")
 	}
@@ -280,7 +280,7 @@ func TestGasTownActionDecommissionOnlyPolecat(t *testing.T) {
 	status2 := &gastown.TownStatus{Agents: agents2}
 	g2.SetStatus(status2, gastown.Env{Available: true})
 
-	_, cmd2 := g2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'K'}})
+	_, cmd2 := g2.Update(tea.KeyPressMsg{Code: 'K', Text: "K"})
 	if cmd2 == nil {
 		t.Fatal("expected cmd for decommission on polecat")
 	}
@@ -380,13 +380,13 @@ func TestGasTownSectionToggle(t *testing.T) {
 	}
 
 	// Tab to convoys
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyTab})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if g.Section() != SectionConvoys {
 		t.Fatal("after tab, section should be SectionConvoys")
 	}
 
 	// Tab back to agents
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyTab})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if g.Section() != SectionAgents {
 		t.Fatal("after second tab, section should be SectionAgents")
 	}
@@ -412,37 +412,37 @@ func TestGasTownConvoyCursor(t *testing.T) {
 	}
 
 	// Move down
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.convoyCursor != 1 {
 		t.Fatalf("after j, convoy cursor = %d, want 1", g.convoyCursor)
 	}
 
 	// Move down
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.convoyCursor != 2 {
 		t.Fatalf("after j j, convoy cursor = %d, want 2", g.convoyCursor)
 	}
 
 	// Can't go past end
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.convoyCursor != 2 {
 		t.Fatalf("cursor should clamp at end, got %d", g.convoyCursor)
 	}
 
 	// Move up
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	if g.convoyCursor != 1 {
 		t.Fatalf("after k, convoy cursor = %d, want 1", g.convoyCursor)
 	}
 
 	// Jump to top
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if g.convoyCursor != 0 {
 		t.Fatalf("after g, convoy cursor = %d, want 0", g.convoyCursor)
 	}
 
 	// Jump to bottom
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	if g.convoyCursor != 2 {
 		t.Fatalf("after G, convoy cursor = %d, want 2", g.convoyCursor)
 	}
@@ -470,13 +470,13 @@ func TestGasTownConvoyExpandCollapse(t *testing.T) {
 	}
 
 	// Enter expands
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if g.expandedConvoy != 0 {
 		t.Fatalf("after enter, expanded = %d, want 0", g.expandedConvoy)
 	}
 
 	// Enter again collapses
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if g.expandedConvoy != -1 {
 		t.Fatalf("after second enter, expanded = %d, want -1", g.expandedConvoy)
 	}
@@ -510,7 +510,7 @@ func TestGasTownSelectedConvoy(t *testing.T) {
 		t.Fatalf("expected convoy cv-1, got %v", c)
 	}
 
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	c = g.SelectedConvoy()
 	if c == nil || c.ID != "cv-2" {
 		t.Fatalf("expected convoy cv-2, got %v", c)
@@ -528,7 +528,7 @@ func TestGasTownActionConvoyLand(t *testing.T) {
 	g.SetConvoyDetails(convoys)
 	g.section = SectionConvoys
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	if cmd == nil {
 		t.Fatal("expected cmd from convoy land action")
 	}
@@ -556,7 +556,7 @@ func TestGasTownActionConvoyClose(t *testing.T) {
 	g.SetConvoyDetails(convoys)
 	g.section = SectionConvoys
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	if cmd == nil {
 		t.Fatal("expected cmd from convoy close action")
 	}
@@ -659,7 +659,7 @@ func TestGasTownSelectedMail(t *testing.T) {
 		t.Fatalf("expected msg-1, got %v", m)
 	}
 
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = g.SelectedMail()
 	if m == nil || m.ID != "msg-2" {
 		t.Fatalf("expected msg-2, got %v", m)
@@ -678,26 +678,26 @@ func TestGasTownMailCursor(t *testing.T) {
 	g.section = SectionMail
 
 	// Move down
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.mailCursor != 1 {
 		t.Fatalf("after j, mail cursor = %d, want 1", g.mailCursor)
 	}
 
 	// Can't go past end
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if g.mailCursor != 2 {
 		t.Fatalf("cursor should clamp at end, got %d", g.mailCursor)
 	}
 
 	// Jump to top
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if g.mailCursor != 0 {
 		t.Fatalf("after g, mail cursor = %d, want 0", g.mailCursor)
 	}
 
 	// Jump to bottom
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	g, _ = g.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	if g.mailCursor != 2 {
 		t.Fatalf("after G, mail cursor = %d, want 2", g.mailCursor)
 	}
@@ -719,7 +719,7 @@ func TestGasTownMailExpandCollapse(t *testing.T) {
 	}
 
 	// Enter expands (already-read message, no cmd emitted)
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if g.expandedMail != 0 {
 		t.Fatalf("after enter, expanded = %d, want 0", g.expandedMail)
 	}
@@ -728,7 +728,7 @@ func TestGasTownMailExpandCollapse(t *testing.T) {
 	}
 
 	// Enter again collapses
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if g.expandedMail != -1 {
 		t.Fatalf("after second enter, expanded = %d, want -1", g.expandedMail)
 	}
@@ -745,7 +745,7 @@ func TestGasTownMailExpandUnreadEmitsMarkRead(t *testing.T) {
 	g.SetMailMessages(msgs)
 	g.section = SectionMail
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if g.expandedMail != 0 {
 		t.Fatalf("expected expand, got %d", g.expandedMail)
 	}
@@ -776,7 +776,7 @@ func TestGasTownMailActionReply(t *testing.T) {
 	g.SetMailMessages(msgs)
 	g.section = SectionMail
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	if cmd == nil {
 		t.Fatal("expected cmd from reply action")
 	}
@@ -804,7 +804,7 @@ func TestGasTownMailActionArchive(t *testing.T) {
 	g.SetMailMessages(msgs)
 	g.section = SectionMail
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	if cmd == nil {
 		t.Fatal("expected cmd from archive action")
 	}
@@ -852,19 +852,19 @@ func TestGasTownSectionCycleWithMail(t *testing.T) {
 	g.SetMailMessages([]gastown.MailMessage{{ID: "msg-1", Subject: "Hello"}})
 
 	// Agents → Convoys
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyTab})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if g.Section() != SectionConvoys {
 		t.Fatalf("expected SectionConvoys, got %d", g.Section())
 	}
 
 	// Convoys → Mail
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyTab})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if g.Section() != SectionMail {
 		t.Fatalf("expected SectionMail, got %d", g.Section())
 	}
 
 	// Mail → Agents
-	g, _ = g.Update(tea.KeyMsg{Type: tea.KeyTab})
+	g, _ = g.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if g.Section() != SectionAgents {
 		t.Fatalf("expected SectionAgents, got %d", g.Section())
 	}
@@ -880,11 +880,11 @@ func TestGasTownMailNoActionInOtherSection(t *testing.T) {
 	g.SetMailMessages([]gastown.MailMessage{{ID: "msg-1", Subject: "Test"}})
 
 	// r and d should not produce cmd in agents section
-	_, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	_, cmd := g.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	if cmd != nil {
 		t.Fatal("r should not produce cmd in agents section")
 	}
-	_, cmd = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	_, cmd = g.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	if cmd != nil {
 		t.Fatal("d should not produce cmd in agents section")
 	}
@@ -916,11 +916,11 @@ func TestGasTownConvoyNoActionInAgentSection(t *testing.T) {
 	g.SetConvoyDetails(convoys)
 
 	// l and x should not produce cmd when in agents section
-	_, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
+	_, cmd := g.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	if cmd != nil {
 		t.Fatal("l should not produce cmd in agents section")
 	}
-	_, cmd = g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	_, cmd = g.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	if cmd != nil {
 		t.Fatal("x should not produce cmd in agents section")
 	}
@@ -1077,7 +1077,7 @@ func TestGasTownMailComposeAction(t *testing.T) {
 	status := &gastown.TownStatus{Agents: agents}
 	g.SetStatus(status, gastown.Env{Available: true})
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	if cmd == nil {
 		t.Fatal("expected cmd from mail compose action")
 	}
@@ -1105,7 +1105,7 @@ func TestGasTownMailComposeFromMail(t *testing.T) {
 	g.SetMailMessages(msgs)
 	g.section = SectionMail
 
-	g, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	g, cmd := g.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	if cmd == nil {
 		t.Fatal("expected cmd from mail compose in mail section")
 	}
@@ -1234,7 +1234,7 @@ func TestGasTownMailComposeNoActionInConvoySection(t *testing.T) {
 	g.SetConvoyDetails([]gastown.ConvoyDetail{{ID: "cv-1", Title: "Sprint"}})
 	g.section = SectionConvoys
 
-	_, cmd := g.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	_, cmd := g.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	if cmd != nil {
 		t.Fatal("w should not produce cmd in convoy section")
 	}

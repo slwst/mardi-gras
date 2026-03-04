@@ -1,12 +1,13 @@
 package app
 
 import (
+	"image/color"
 	"math/rand/v2"
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/matt-wright86/mardi-gras/internal/ui"
 )
 
@@ -20,7 +21,7 @@ const (
 
 var confettiGlyphs = []string{"●", "◆", "⚜", "✦", "✧", "★", "♦"}
 var necklaceGlyphs = []string{"●", "◆", "●", "◆", "●"} // alternating bead shapes
-var confettiColors = []lipgloss.Color{
+var confettiColors = []color.Color{
 	ui.Purple, ui.Gold, ui.Green,
 	ui.BrightPurple, ui.BrightGold, ui.BrightGreen,
 }
@@ -29,17 +30,17 @@ type particle struct {
 	x, y   float64
 	vx, vy float64
 	glyph  string
-	color  lipgloss.Color
+	color  color.Color
 }
 
 // necklace is a vertical chain of connected beads that falls together.
 type necklace struct {
-	x      float64          // horizontal position
-	y      float64          // top bead position
-	vy     float64          // vertical velocity
-	vx     float64          // slight horizontal sway
-	beads  []lipgloss.Color // color per bead
-	glyphs []string         // glyph per bead
+	x      float64       // horizontal position
+	y      float64       // top bead position
+	vy     float64       // vertical velocity
+	vx     float64       // slight horizontal sway
+	beads  []color.Color // color per bead
+	glyphs []string      // glyph per bead
 }
 
 // Confetti is a particle animation triggered on issue close.
@@ -77,11 +78,11 @@ func NewConfetti(width, height int) Confetti {
 	// Create bead necklaces that fall from the top
 	necklaces := make([]necklace, necklaceCount)
 	for i := range necklaces {
-		beadColors := make([]lipgloss.Color, necklaceLength)
+		beadColors := make([]color.Color, necklaceLength)
 		beadGlyphs := make([]string, necklaceLength)
 		// Each necklace uses a consistent Mardi Gras color trio
 		baseIdx := i % 3
-		colorTriple := []lipgloss.Color{ui.BrightPurple, ui.BrightGold, ui.BrightGreen}
+		colorTriple := []color.Color{ui.BrightPurple, ui.BrightGold, ui.BrightGreen}
 		for j := range beadColors {
 			beadColors[j] = colorTriple[(baseIdx+j)%3]
 			beadGlyphs[j] = necklaceGlyphs[j%len(necklaceGlyphs)]
@@ -151,10 +152,10 @@ func (c Confetti) View() string {
 
 	// Build a character grid
 	grid := make([][]rune, c.height)
-	colors := make([][]lipgloss.Color, c.height)
+	colors := make([][]color.Color, c.height)
 	for y := range grid {
 		grid[y] = make([]rune, c.width)
-		colors[y] = make([]lipgloss.Color, c.width)
+		colors[y] = make([]color.Color, c.width)
 		for x := range grid[y] {
 			grid[y][x] = ' '
 		}

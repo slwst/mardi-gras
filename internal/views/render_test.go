@@ -1,12 +1,13 @@
 package views
 
 import (
+	"image/color"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 	"github.com/matt-wright86/mardi-gras/internal/ui"
 )
@@ -85,7 +86,7 @@ func TestStatusColor(t *testing.T) {
 	tests := []struct {
 		name   string
 		issue  data.Issue
-		expect lipgloss.Color
+		expect color.Color
 	}{
 		{
 			name:   "closed",
@@ -272,7 +273,7 @@ func TestRenderIssueChangedDot(t *testing.T) {
 
 func TestDetailViewNilIssue(t *testing.T) {
 	d := Detail{Width: 60, Height: 20}
-	d.Viewport = viewport.New(58, 20)
+	d.Viewport = viewport.New(viewport.WithWidth(58), viewport.WithHeight(20))
 	out := d.View()
 
 	if !strings.Contains(out, "No issue selected") {
@@ -408,12 +409,14 @@ func TestRenderIssueHierarchicalIndent(t *testing.T) {
 	issues := []data.Issue{parent, child, grandchild}
 	p := NewParade(issues, 100, 30, data.DefaultBlockingTypes)
 
-	// Collect rendered output for child and grandchild
+	// Collect rendered output for child and grandchild.
+	// Strip ANSI codes before checking indent because lipgloss v2 wraps
+	// each styled segment in its own escape sequences.
 	for _, it := range p.Items {
 		if it.Issue == nil {
 			continue
 		}
-		out := p.renderIssue(it, false)
+		out := ansi.Strip(p.renderIssue(it, false))
 		switch it.Issue.ID {
 		case "mg-007":
 			// Parent should not have extra indent (no leading spaces before sym)

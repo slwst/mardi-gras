@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 )
 
@@ -29,18 +29,19 @@ func TestFileChangedMsgPreservesSelectionAndClosedState(t *testing.T) {
 	}
 
 	m := New(issues, data.Source{}, data.DefaultBlockingTypes)
+	m.startedAt = time.Now().Add(-time.Second) // bypass startup guard
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	got := model.(Model)
 
 	// Move selection to second open issue.
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got = model.(Model)
 	if got.parade.SelectedIssue == nil || got.parade.SelectedIssue.ID != "open-2" {
 		t.Fatalf("expected selected issue open-2 before refresh, got %+v", got.parade.SelectedIssue)
 	}
 
 	// Expand closed section.
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	got = model.(Model)
 	if !got.parade.ShowClosed {
 		t.Fatal("expected closed section expanded before refresh")
@@ -65,16 +66,17 @@ func TestFilteringModeAcceptsTypedInput(t *testing.T) {
 	}
 
 	m := New(issues, data.Source{}, data.DefaultBlockingTypes)
+	m.startedAt = time.Now().Add(-time.Second) // bypass startup guard
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	got := model.(Model)
 
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	got = model.(Model)
 	if !got.filtering {
 		t.Fatal("expected filtering mode to be active after pressing /")
 	}
 
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'b', Text: "b"})
 	got = model.(Model)
 	if got.filterInput.Value() != "b" {
 		t.Fatalf("expected filter input value %q, got %q", "b", got.filterInput.Value())
@@ -87,16 +89,17 @@ func TestFilteringModeQStillQuits(t *testing.T) {
 	}
 
 	m := New(issues, data.Source{}, data.DefaultBlockingTypes)
+	m.startedAt = time.Now().Add(-time.Second) // bypass startup guard
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	got := model.(Model)
 
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	got = model.(Model)
 	if !got.filtering {
 		t.Fatal("expected filtering mode to be active after pressing /")
 	}
 
-	_, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, cmd := got.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if cmd == nil {
 		t.Fatal("expected quit command when pressing q in filtering mode")
 	}
@@ -113,16 +116,17 @@ func TestHelpCanOpenFromFilteringMode(t *testing.T) {
 	}
 
 	m := New(issues, data.Source{}, data.DefaultBlockingTypes)
+	m.startedAt = time.Now().Add(-time.Second) // bypass startup guard
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	got := model.(Model)
 
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	got = model.(Model)
 	if !got.filtering {
 		t.Fatal("expected filtering mode to be active after pressing /")
 	}
 
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
 	got = model.(Model)
 	if !got.showHelp {
 		t.Fatal("expected help overlay to open from filtering mode")
@@ -132,7 +136,7 @@ func TestHelpCanOpenFromFilteringMode(t *testing.T) {
 	}
 
 	// Closing help should return to prior mode.
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model, _ = got.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	got = model.(Model)
 	if got.showHelp {
 		t.Fatal("expected help overlay to close on esc")

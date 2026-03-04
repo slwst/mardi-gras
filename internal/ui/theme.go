@@ -1,6 +1,10 @@
 package ui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"image/color"
+
+	"charm.land/lipgloss/v2"
+)
 
 // Mardi Gras palette.
 var (
@@ -82,7 +86,7 @@ var (
 )
 
 // PriorityColor returns the theme color for a priority level.
-func PriorityColor(p int) lipgloss.Color {
+func PriorityColor(p int) color.Color {
 	switch p {
 	case 0:
 		return PrioP0
@@ -101,7 +105,7 @@ func PriorityColor(p int) lipgloss.Color {
 
 // IssueTypeColor returns the theme color for an issue type.
 // RoleColor returns the theme color for a Gas Town agent role.
-func RoleColor(role string) lipgloss.Color {
+func RoleColor(role string) color.Color {
 	switch role {
 	case "mayor", "coordinator":
 		return RoleMayor
@@ -123,7 +127,7 @@ func RoleColor(role string) lipgloss.Color {
 }
 
 // AgentStateColor returns the theme color for a Gas Town agent state.
-func AgentStateColor(state string) lipgloss.Color {
+func AgentStateColor(state string) color.Color {
 	switch state {
 	case "working":
 		return StateWorking
@@ -143,7 +147,7 @@ func AgentStateColor(state string) lipgloss.Color {
 }
 
 // QualityColor returns the theme color for a quality score (0.0-1.0).
-func QualityColor(score float32) lipgloss.Color {
+func QualityColor(score float32) color.Color {
 	switch {
 	case score >= 0.9:
 		return QualityExcellent
@@ -158,7 +162,7 @@ func QualityColor(score float32) lipgloss.Color {
 	}
 }
 
-func IssueTypeColor(t string) lipgloss.Color {
+func IssueTypeColor(t string) color.Color {
 	switch t {
 	case "bug":
 		return ColorBug

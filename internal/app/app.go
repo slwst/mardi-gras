@@ -6,11 +6,11 @@ import (
 	"os/exec"
 	"time"
 
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/matt-wright86/mardi-gras/internal/agent"
 	"github.com/matt-wright86/mardi-gras/internal/components"
 	"github.com/matt-wright86/mardi-gras/internal/data"
@@ -80,6 +80,7 @@ type Model struct {
 	// Command palette
 	showPalette bool
 	palette     components.Palette
+	startedAt   time.Time // guards ":" palette trigger during terminal negotiation
 
 	// Formula picker state
 	formulaPicking bool
@@ -129,10 +130,24 @@ type Model struct {
 
 	// Metadata schema from .beads/config.yaml
 	metadataSchema *data.MetadataSchema
+
+	// Shared terminal control-sequence guard (used by both the Bubble Tea
+	// filter and app-level deferred key handling).
+	oscGuard *OSCGuard
+
+	// Deferred printable key handling for non-text-entry modes.
+	pendingKeys  []pendingDeferredKey
+	pendingKeyID uint64
 }
 
 // New creates a new app model from loaded issues.
 func New(issues []data.Issue, source data.Source, blockingTypes map[string]bool) Model {
+	return NewWithGuard(issues, source, blockingTypes, nil)
+}
+
+// NewWithGuard creates a new app model from loaded issues and attaches a
+// shared OSC guard when one is provided.
+func NewWithGuard(issues []data.Issue, source data.Source, blockingTypes map[string]bool, guard *OSCGuard) Model {
 	groups := data.GroupByParade(issues, blockingTypes)
 
 	watchPath := source.Path
@@ -148,9 +163,7 @@ func New(issues []data.Issue, source data.Source, blockingTypes map[string]bool)
 	ti := textinput.New()
 	ti.Prompt = ui.InputPrompt.Render("/ ")
 	ti.Placeholder = "Filter type:bug, p1, or fuzzy text..."
-	ti.TextStyle = ui.InputText
-	ti.Cursor.Style = ui.InputCursor
-	ti.Width = 50
+	ti.SetWidth(50)
 
 	// Build initial status snapshot for change detection
 	prevMap := make(map[string]data.Status, len(issues))
@@ -180,6 +193,8 @@ func New(issues []data.Issue, source data.Source, blockingTypes map[string]bool)
 		prevIssueMap:   prevMap,
 		sourceMode:     source.Mode,
 		metadataSchema: metaSchema,
+		startedAt:      time.Now(),
+		oscGuard:       guard,
 	}
 }
 
@@ -388,6 +403,20 @@ type headerShimmerMsg struct{}
 
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	logMsg(msg)
+
+	skipDeferredKeyBuffer := false
+	if deferred, ok := msg.(deferredKeyMsg); ok {
+		var key tea.KeyPressMsg
+		var resolved bool
+		m, key, resolved = m.resolveDeferredKey(deferred)
+		if !resolved {
+			return m, nil
+		}
+		msg = key
+		skipDeferredKeyBuffer = true
+	}
+
 	// Handle create form result
 	if result, ok := msg.(components.CreateFormResult); ok {
 		m.creating = false
@@ -438,9 +467,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward all messages to palette when active
 	if m.showPalette {
-		if km, ok := msg.(tea.KeyMsg); ok && km.String() == "ctrl+c" {
+		if km, ok := msg.(tea.KeyPressMsg); ok && km.String() == "ctrl+c" {
+			logRoute("palette ctrl+c -> quit")
 			return m, tea.Quit
 		}
+		logRoute("palette forward")
 		var cmd tea.Cmd
 		m.palette, cmd = m.palette.Update(msg)
 		return m, cmd
@@ -448,9 +479,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward all messages to create form when active
 	if m.creating {
-		if km, ok := msg.(tea.KeyMsg); ok && km.String() == "ctrl+c" {
+		if km, ok := msg.(tea.KeyPressMsg); ok && km.String() == "ctrl+c" {
+			logRoute("createForm ctrl+c -> quit")
 			return m, tea.Quit
 		}
+		logRoute("createForm forward")
 		var cmd tea.Cmd
 		m.createForm, cmd = m.createForm.Update(msg)
 		return m, cmd
@@ -458,7 +491,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward all messages to nudge input when active
 	if m.nudging {
-		if km, ok := msg.(tea.KeyMsg); ok {
+		if km, ok := msg.(tea.KeyPressMsg); ok {
 			switch km.String() {
 			case "ctrl+c":
 				return m, tea.Quit
@@ -482,7 +515,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward all messages to mail reply input when active
 	if m.mailReplying {
-		if km, ok := msg.(tea.KeyMsg); ok {
+		if km, ok := msg.(tea.KeyPressMsg); ok {
 			switch km.String() {
 			case "ctrl+c":
 				return m, tea.Quit
@@ -511,7 +544,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward all messages to mail compose input when active
 	if m.mailComposing {
-		if km, ok := msg.(tea.KeyMsg); ok {
+		if km, ok := msg.(tea.KeyPressMsg); ok {
 			switch km.String() {
 			case "ctrl+c":
 				return m, tea.Quit
@@ -532,9 +565,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.mailComposeInput = textinput.New()
 					m.mailComposeInput.Prompt = ui.InputPrompt.Render("message> ")
 					m.mailComposeInput.Placeholder = "Message body..."
-					m.mailComposeInput.TextStyle = ui.InputText
-					m.mailComposeInput.Cursor.Style = ui.InputCursor
-					m.mailComposeInput.Width = 50
+					m.mailComposeInput.SetWidth(50)
 					m.mailComposeInput.Focus()
 					return m, textinput.Blink
 				}
@@ -561,7 +592,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward all messages to convoy name input when active
 	if m.convoyCreating {
-		if km, ok := msg.(tea.KeyMsg); ok {
+		if km, ok := msg.(tea.KeyPressMsg); ok {
 			switch km.String() {
 			case "ctrl+c":
 				return m, tea.Quit
@@ -589,17 +620,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-		if m.showHelp {
-			return m.handleHelpKey(msg)
-		}
-		if m.filtering {
-			return m.handleFilteringKey(msg)
-		}
-		return m.handleKey(msg)
+	case tea.KeyPressMsg:
+		return m.handleKeyPress(msg, !skipDeferredKeyBuffer)
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -1125,7 +1147,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "q", "?":
 		m.showHelp = false
@@ -1135,7 +1157,7 @@ func (m Model) handleHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m Model) handleFilteringKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleFilteringKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q":
 		return m, tea.Quit
@@ -1163,11 +1185,18 @@ func (m Model) handleFilteringKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	str := msg.String()
+	ks := msg.Keystroke()
+	if str != ks {
+		dbg("  handleKey: String=%q Keystroke=%q (DIFFER)", str, ks)
+	}
+
 	// When Problems panel is focused, route its keys before global handlers
 	if m.showProblems && m.activPane == PaneDetail {
 		switch msg.String() {
 		case "j", "k", "up", "down", "g", "G", "n", "h", "K":
+			logAction("problems panel key: %s", msg.String())
 			var cmd tea.Cmd
 			m.problems, cmd = m.problems.Update(msg)
 			return m, cmd
@@ -1178,17 +1207,20 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.showGasTown && m.activPane == PaneDetail {
 		switch msg.String() {
 		case "j", "k", "up", "down", "g", "G", "n", "h", "K", "tab", "enter", "l", "x", "r", "d", "w":
+			logAction("gastown panel key: %s", msg.String())
 			var cmd tea.Cmd
 			m.gasTown, cmd = m.gasTown.Update(msg)
 			return m, cmd
 		}
 	}
 
-	switch msg.String() {
+	switch str {
 	case "q":
+		logAction("quit")
 		return m, tea.Quit
 
 	case "?":
+		logAction("help")
 		m.showHelp = true
 		return m, nil
 
@@ -1407,9 +1439,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.nudgeInput = textinput.New()
 		m.nudgeInput.Prompt = ui.InputPrompt.Render("nudge> ")
 		m.nudgeInput.Placeholder = "Message for " + agentName + "..."
-		m.nudgeInput.TextStyle = ui.InputText
-		m.nudgeInput.Cursor.Style = ui.InputCursor
-		m.nudgeInput.Width = 50
+		m.nudgeInput.SetWidth(50)
 		m.nudgeInput.Focus()
 		return m, textinput.Blink
 
@@ -1440,13 +1470,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.convoyInput = textinput.New()
 		m.convoyInput.Prompt = ui.InputPrompt.Render("convoy> ")
 		m.convoyInput.Placeholder = fmt.Sprintf("Name for convoy (%d issues)...", len(ids))
-		m.convoyInput.TextStyle = ui.InputText
-		m.convoyInput.Cursor.Style = ui.InputCursor
-		m.convoyInput.Width = 50
+		m.convoyInput.SetWidth(50)
 		m.convoyInput.Focus()
 		return m, textinput.Blink
 
-	case ":", "ctrl+k":
+	case "ctrl+k":
+		m.showPalette = true
+		m.palette = components.NewPalette(m.width, m.height, m.buildPaletteCommands())
+		return m, m.palette.Init()
+	case ":":
 		m.showPalette = true
 		m.palette = components.NewPalette(m.width, m.height, m.buildPaletteCommands())
 		return m, m.palette.Init()
@@ -1454,7 +1486,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Navigation keys depend on active pane
 	if m.activPane == PaneParade {
-		switch msg.String() {
+		logAction("parade nav: %s", str)
+		switch str {
 		case "j", "down":
 			m.parade.MoveDown()
 			m.syncSelection()
@@ -1469,7 +1502,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.parade.ToggleSelect()
 			m.parade.MoveUp()
 			m.syncSelection()
-		case " ", "x": // Toggle multi-select
+		case "space", "x": // Toggle multi-select
 			m.parade.ToggleSelect()
 		case "X": // Clear all selections
 			m.parade.ClearSelection()
@@ -1510,13 +1543,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Detail pane navigation (or Gas Town panel when active)
 	if m.activPane == PaneDetail {
+		logAction("detail nav: %s", str)
 		if m.showGasTown {
 			var cmd tea.Cmd
 			m.gasTown, cmd = m.gasTown.Update(msg)
 			return m, cmd
 		}
 		var cmd tea.Cmd
-		switch msg.String() {
+		switch str {
 		case "j", "down":
 			m.detail.Viewport.ScrollDown(1)
 		case "k", "up":
@@ -1538,6 +1572,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	dbg("  UNHANDLED key: String=%q Keystroke=%q pane=%d", str, ks, m.activPane)
 	return m, nil
 }
 
@@ -1789,13 +1824,13 @@ func (m Model) executePaletteAction(action components.PaletteAction) (tea.Model,
 		m.filterInput.Focus()
 		return m, textinput.Blink
 	case components.ActionLaunchAgent:
-		return m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+		return m.handleKey(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	case components.ActionKillAgent:
-		return m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'A'}})
+		return m.handleKey(tea.KeyPressMsg{Code: 'A', Text: "A"})
 	case components.ActionSlingFormula:
-		return m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+		return m.handleKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	case components.ActionNudgeAgent:
-		return m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+		return m.handleKey(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	case components.ActionToggleGasTown:
 		if !m.gtEnv.Available {
 			return m, nil
@@ -1810,7 +1845,7 @@ func (m Model) executePaletteAction(action components.PaletteAction) (tea.Model,
 		}
 		return m, nil
 	case components.ActionCreateConvoy:
-		return m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'C'}})
+		return m.handleKey(tea.KeyPressMsg{Code: 'C', Text: "C"})
 	case components.ActionHelp:
 		m.showHelp = true
 		return m, nil
@@ -1834,9 +1869,7 @@ func (m Model) handleGasTownAction(msg views.GasTownActionMsg) (tea.Model, tea.C
 		m.nudgeInput = textinput.New()
 		m.nudgeInput.Prompt = ui.InputPrompt.Render("nudge> ")
 		m.nudgeInput.Placeholder = "Message for " + msg.Agent.Name + "..."
-		m.nudgeInput.TextStyle = ui.InputText
-		m.nudgeInput.Cursor.Style = ui.InputCursor
-		m.nudgeInput.Width = 50
+		m.nudgeInput.SetWidth(50)
 		m.nudgeInput.Focus()
 		return m, textinput.Blink
 
@@ -1890,9 +1923,7 @@ func (m Model) handleGasTownAction(msg views.GasTownActionMsg) (tea.Model, tea.C
 		m.mailReplyInput = textinput.New()
 		m.mailReplyInput.Prompt = ui.InputPrompt.Render("reply> ")
 		m.mailReplyInput.Placeholder = "Reply to " + msg.Mail.From + "..."
-		m.mailReplyInput.TextStyle = ui.InputText
-		m.mailReplyInput.Cursor.Style = ui.InputCursor
-		m.mailReplyInput.Width = 50
+		m.mailReplyInput.SetWidth(50)
 		m.mailReplyInput.Focus()
 		return m, textinput.Blink
 
@@ -1922,9 +1953,7 @@ func (m Model) handleGasTownAction(msg views.GasTownActionMsg) (tea.Model, tea.C
 		m.mailComposeInput = textinput.New()
 		m.mailComposeInput.Prompt = ui.InputPrompt.Render("subject> ")
 		m.mailComposeInput.Placeholder = "Subject for " + msg.Agent.Name + "..."
-		m.mailComposeInput.TextStyle = ui.InputText
-		m.mailComposeInput.Cursor.Style = ui.InputCursor
-		m.mailComposeInput.Width = 50
+		m.mailComposeInput.SetWidth(50)
 		m.mailComposeInput.Focus()
 		return m, textinput.Blink
 	}
@@ -2044,7 +2073,7 @@ func (m *Model) layout() {
 		}
 	}
 
-	m.detail.Viewport = viewport.New(detailW-2, bodyH)
+	m.detail.Viewport = viewport.New(viewport.WithWidth(detailW-2), viewport.WithHeight(bodyH))
 	m.propagateAgentState()
 	if m.parade.SelectedIssue != nil {
 		m.detail.SetIssue(m.parade.SelectedIssue)
@@ -2264,10 +2293,17 @@ func fetchMoleculeDAG(issueID string) tea.Cmd {
 	}
 }
 
+// altView wraps a string as a tea.View with AltScreen enabled.
+func altView(s string) tea.View {
+	v := tea.NewView(s)
+	v.AltScreen = true
+	return v
+}
+
 // View implements tea.Model.
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	if !m.ready {
-		return "Loading..."
+		return altView("Loading...")
 	}
 
 	header := m.header.View()
@@ -2330,12 +2366,12 @@ func (m Model) View() string {
 	}
 
 	if m.showPalette {
-		return m.palette.View()
+		return altView(m.palette.View())
 	}
 
 	if m.showHelp {
 		helpModal := components.NewHelp(m.width, m.height).View()
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, helpModal)
+		return altView(lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, helpModal))
 	}
 
 	if m.creating {
@@ -2344,10 +2380,10 @@ func (m Model) View() string {
 		formHint := ui.HelpHint.Render("esc to cancel")
 		formContent := lipgloss.JoinVertical(lipgloss.Left, formTitle, "", formBody, "", formHint)
 		formBox := ui.HelpOverlayBg.Width(m.width - 8).Render(formContent)
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, formBox)
+		return altView(lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, formBox))
 	}
 
-	return screen
+	return altView(screen)
 }
 
 // overlayStrings composites non-space characters from overlay onto base.

@@ -2,11 +2,12 @@ package views
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/matt-wright86/mardi-gras/internal/gastown"
 	"github.com/matt-wright86/mardi-gras/internal/ui"
 )
@@ -259,7 +260,7 @@ func (g *GasTown) Section() GasTownSection {
 // Update handles key messages for the Gas Town panel.
 // Returns a tea.Cmd when the panel wants to emit an action back to app.go.
 func (g GasTown) Update(msg tea.Msg) (GasTown, tea.Cmd) {
-	km, ok := msg.(tea.KeyMsg)
+	km, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return g, nil
 	}
@@ -1206,7 +1207,7 @@ func eventLabel(ev gastown.Event) string {
 }
 
 // eventColor returns a theme color for an event type.
-func eventColor(ev gastown.Event) lipgloss.Color {
+func eventColor(ev gastown.Event) color.Color {
 	switch ev.Type {
 	case "sling":
 		return ui.BrightGreen // dispatch = forward motion

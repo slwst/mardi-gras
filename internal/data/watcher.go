@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // FileChangedMsg signals that the issues file was modified on disk.

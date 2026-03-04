@@ -3,9 +3,9 @@ package components
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/matt-wright86/mardi-gras/internal/ui"
 	"github.com/sahilm/fuzzy"
@@ -84,15 +84,13 @@ func NewPalette(width, height int, commands []PaletteCommand) Palette {
 	ti := textinput.New()
 	ti.Prompt = ui.InputPrompt.Render(ui.FleurDeLis + " ")
 	ti.Placeholder = "Type a command..."
-	ti.TextStyle = ui.InputText
-	ti.Cursor.Style = ui.InputCursor
 	ti.Focus()
 
 	contentWidth := width - 8
 	if contentWidth > 60 {
 		contentWidth = 60
 	}
-	ti.Width = contentWidth - 6
+	ti.SetWidth(contentWidth - 6)
 
 	return Palette{
 		input:    ti,
@@ -110,7 +108,7 @@ func (p Palette) Init() tea.Cmd {
 
 // Update handles messages for the palette.
 func (p Palette) Update(msg tea.Msg) (Palette, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
 		case "esc":
 			return p, func() tea.Msg {

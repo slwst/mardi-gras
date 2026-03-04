@@ -2,8 +2,9 @@ package app
 
 import (
 	"testing"
+	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/matt-wright86/mardi-gras/internal/components"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 )
@@ -16,6 +17,7 @@ func initModel(t *testing.T) Model {
 		testIssue("closed-1", data.StatusClosed),
 	}
 	m := New(issues, data.Source{}, data.DefaultBlockingTypes)
+	m.startedAt = time.Now().Add(-time.Second) // bypass startup guard
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	return model.(Model)
 }
@@ -23,7 +25,7 @@ func initModel(t *testing.T) Model {
 func TestColonOpensPalette(t *testing.T) {
 	got := initModel(t)
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	got = model.(Model)
 
 	if !got.showPalette {
@@ -34,7 +36,7 @@ func TestColonOpensPalette(t *testing.T) {
 func TestCtrlKOpensPalette(t *testing.T) {
 	got := initModel(t)
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyCtrlK})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl})
 	got = model.(Model)
 
 	if !got.showPalette {
@@ -46,12 +48,12 @@ func TestPaletteForwardsKeys(t *testing.T) {
 	got := initModel(t)
 
 	// Open palette
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	got = model.(Model)
 
 	// Press 'j' — should NOT move parade cursor (should go to palette input)
 	oldCursor := got.parade.Cursor
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got = model.(Model)
 
 	if got.parade.Cursor != oldCursor {
@@ -66,7 +68,7 @@ func TestPaletteResultCancelledClosesPalette(t *testing.T) {
 	got := initModel(t)
 
 	// Open palette
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	got = model.(Model)
 	if !got.showPalette {
 		t.Fatal("expected palette to be open")
@@ -85,7 +87,7 @@ func TestPaletteResultExecutesAction(t *testing.T) {
 	got := initModel(t)
 
 	// Open palette
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	got = model.(Model)
 
 	// Send toggle closed action
@@ -104,11 +106,11 @@ func TestPaletteCtrlCQuits(t *testing.T) {
 	got := initModel(t)
 
 	// Open palette
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	got = model.(Model)
 
 	// Press ctrl+c
-	_, cmd := got.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	_, cmd := got.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	if cmd == nil {
 		t.Fatal("expected quit command from ctrl+c during palette")
 	}

@@ -2,8 +2,9 @@ package app
 
 import (
 	"testing"
+	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/matt-wright86/mardi-gras/internal/components"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 )
@@ -23,6 +24,7 @@ func setupModel(t *testing.T) Model {
 		testIssue("closed-1", data.StatusClosed),
 	}
 	m := New(issues, data.Source{}, data.DefaultBlockingTypes)
+	m.startedAt = time.Now().Add(-time.Second) // bypass startup guard
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	return model.(Model)
 }
@@ -34,7 +36,7 @@ func setupModel(t *testing.T) Model {
 func TestKeyQQuits(t *testing.T) {
 	got := setupModel(t)
 
-	_, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, cmd := got.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if cmd == nil {
 		t.Fatal("expected quit command from pressing q")
 	}
@@ -51,7 +53,7 @@ func TestKeyQQuits(t *testing.T) {
 func TestKeyQuestionOpensHelp(t *testing.T) {
 	got := setupModel(t)
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
 	got = model.(Model)
 
 	if !got.showHelp {
@@ -66,7 +68,7 @@ func TestKeyQuestionOpensHelp(t *testing.T) {
 func TestKeySlashEntersFilter(t *testing.T) {
 	got := setupModel(t)
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	got = model.(Model)
 
 	if !got.filtering {
@@ -86,14 +88,14 @@ func TestKeyTabTogglesPanes(t *testing.T) {
 	}
 
 	// Tab: Parade -> Detail
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := got.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	got = model.(Model)
 	if got.activPane != PaneDetail {
 		t.Fatalf("expected activPane PaneDetail after first tab, got %d", got.activPane)
 	}
 
 	// Tab: Detail -> Parade
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ = got.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	got = model.(Model)
 	if got.activPane != PaneParade {
 		t.Fatalf("expected activPane PaneParade after second tab, got %d", got.activPane)
@@ -108,7 +110,7 @@ func TestKeyEscExitsFocusMode(t *testing.T) {
 	got := setupModel(t)
 	got.focusMode = true
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model, _ := got.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	got = model.(Model)
 
 	if got.focusMode {
@@ -124,7 +126,7 @@ func TestKeyEscDetailToParade(t *testing.T) {
 	got := setupModel(t)
 	got.activPane = PaneDetail
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model, _ := got.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	got = model.(Model)
 
 	if got.activPane != PaneParade {
@@ -144,7 +146,7 @@ func TestKeyFTogglesFocus(t *testing.T) {
 	}
 
 	// Toggle ON
-	model, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
+	model, cmd := got.Update(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	got = model.(Model)
 	if !got.focusMode {
 		t.Fatal("expected focusMode to be true after pressing f")
@@ -154,7 +156,7 @@ func TestKeyFTogglesFocus(t *testing.T) {
 	}
 
 	// Toggle OFF
-	model, cmd = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
+	model, cmd = got.Update(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	got = model.(Model)
 	if got.focusMode {
 		t.Fatal("expected focusMode to be false after pressing f again")
@@ -175,13 +177,13 @@ func TestKeyCTogglesClosed(t *testing.T) {
 		t.Fatal("expected ShowClosed to be false initially")
 	}
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	got = model.(Model)
 	if !got.parade.ShowClosed {
 		t.Fatal("expected ShowClosed to be true after pressing c")
 	}
 
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	got = model.(Model)
 	if got.parade.ShowClosed {
 		t.Fatal("expected ShowClosed to be false after pressing c again")
@@ -195,7 +197,7 @@ func TestKeyCTogglesClosed(t *testing.T) {
 func TestKeyNOpensCreateForm(t *testing.T) {
 	got := setupModel(t)
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'N'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'N', Text: "N"})
 	got = model.(Model)
 
 	if !got.creating {
@@ -214,7 +216,7 @@ func TestKeyEnterSwitchesToDetail(t *testing.T) {
 		t.Fatal("expected activPane to be PaneParade initially")
 	}
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := got.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got = model.(Model)
 
 	if got.activPane != PaneDetail {
@@ -230,13 +232,13 @@ func TestKeyGJumpsToTop(t *testing.T) {
 	got := setupModel(t)
 
 	// Move cursor down a few times first
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got = model.(Model)
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got = model.(Model)
 
 	// Press g to jump to top
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	got = model.(Model)
 
 	// The cursor should be on the first non-header item
@@ -261,11 +263,11 @@ func TestKeyGGJumpsToBottom(t *testing.T) {
 	got := setupModel(t)
 
 	// First expand closed so we have more items
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	got = model.(Model)
 
 	// Press G to jump to bottom
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	got = model.(Model)
 
 	// The cursor should be on the last non-header item
@@ -293,7 +295,7 @@ func TestKeyJKNavigation(t *testing.T) {
 	startCursor := got.parade.Cursor
 
 	// j moves down
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got = model.(Model)
 	afterJ := got.parade.Cursor
 	if afterJ <= startCursor {
@@ -301,7 +303,7 @@ func TestKeyJKNavigation(t *testing.T) {
 	}
 
 	// k moves back up
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got = model.(Model)
 	afterK := got.parade.Cursor
 	if afterK >= afterJ {
@@ -316,7 +318,7 @@ func TestKeyJKNavigation(t *testing.T) {
 func TestKeySpaceTogglesSelect(t *testing.T) {
 	got := setupModel(t)
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
 	got = model.(Model)
 
 	if len(got.parade.Selected) == 0 {
@@ -332,14 +334,14 @@ func TestKeyXClearsSelection(t *testing.T) {
 	got := setupModel(t)
 
 	// Select an item first
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
 	got = model.(Model)
 	if len(got.parade.Selected) == 0 {
 		t.Fatal("expected parade.Selected to be non-empty after space")
 	}
 
 	// X clears all selections
-	model, _ = got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'X'}})
+	model, _ = got.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	got = model.(Model)
 	if len(got.parade.Selected) != 0 {
 		t.Fatalf("expected parade.Selected to be empty after X, got %d", len(got.parade.Selected))
@@ -355,7 +357,7 @@ func TestKeyJShiftSelectMoves(t *testing.T) {
 
 	startCursor := got.parade.Cursor
 
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'J'}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: 'J', Text: "J"})
 	got = model.(Model)
 
 	if len(got.parade.Selected) == 0 {
@@ -448,7 +450,7 @@ func TestKeySGasTownFetchesFormulas(t *testing.T) {
 	got := setupModel(t)
 	got.gtEnv.Available = true
 
-	model, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	model, cmd := got.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	got = model.(Model)
 
 	if cmd == nil {
@@ -468,7 +470,7 @@ func TestKeySNoGasTownNoop(t *testing.T) {
 	got := setupModel(t)
 	got.gtEnv.Available = false
 
-	_, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	_, cmd := got.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	if cmd != nil {
 		t.Fatal("expected nil cmd from pressing s without Gas Town")
 	}
@@ -484,7 +486,7 @@ func TestKeyNOpensNudgeInput(t *testing.T) {
 	issueID := got.parade.SelectedIssue.ID
 	got.activeAgents[issueID] = "Toast"
 
-	model, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	model, cmd := got.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	got = model.(Model)
 
 	if !got.nudging {
@@ -506,7 +508,7 @@ func TestKeyNNoActiveAgentNoop(t *testing.T) {
 	got := setupModel(t)
 	got.gtEnv.Available = true
 
-	model, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	model, cmd := got.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	got = model.(Model)
 
 	if got.nudging {
@@ -527,7 +529,7 @@ func TestKeyAGasTownUnsling(t *testing.T) {
 	issueID := got.parade.SelectedIssue.ID
 	got.activeAgents[issueID] = "Toast"
 
-	_, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'A'}})
+	_, cmd := got.Update(tea.KeyPressMsg{Code: 'A', Text: "A"})
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd from pressing A with Gas Town and active agent")
 	}
@@ -546,7 +548,7 @@ func TestKeyANoActiveAgentNoop(t *testing.T) {
 	got := setupModel(t)
 	got.gtEnv.Available = true
 
-	_, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'A'}})
+	_, cmd := got.Update(tea.KeyPressMsg{Code: 'A', Text: "A"})
 	if cmd != nil {
 		t.Fatal("expected nil cmd when no active agent for A key")
 	}
@@ -602,13 +604,13 @@ func TestKeyAMultiSlingWithSelection(t *testing.T) {
 	got.gtEnv.Available = true
 
 	// Select current item
-	model, _ := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	model, _ := got.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
 	got = model.(Model)
 	if got.parade.SelectionCount() == 0 {
 		t.Fatal("expected items to be selected")
 	}
 
-	model, cmd := got.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	model, cmd := got.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	got = model.(Model)
 
 	if cmd == nil {

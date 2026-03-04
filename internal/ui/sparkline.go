@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/lucasb-eyer/go-colorful"
 )
 
@@ -32,9 +32,9 @@ func RenderSparkline(values []int, width int) string {
 	}
 
 	// Gradient: green (low activity) → gold (medium) → red (high)
-	cLow, _ := colorful.Hex(string(DimGreen))
-	cMid, _ := colorful.Hex(string(BrightGold))
-	cHigh, _ := colorful.Hex(string(StateBackoff))
+	cLow := toColorful(DimGreen)
+	cMid := toColorful(BrightGold)
+	cHigh := toColorful(StateBackoff)
 
 	var b strings.Builder
 	n := min(len(values), width)
@@ -69,9 +69,9 @@ func HeatChar(eventCount, maxCount int) string {
 		return lipgloss.NewStyle().Foreground(Dim).Render("·")
 	}
 
-	cLow, _ := colorful.Hex(string(BrightGreen))
-	cMid, _ := colorful.Hex(string(BrightGold))
-	cHigh, _ := colorful.Hex(string(StateBackoff))
+	cLow := toColorful(BrightGreen)
+	cMid := toColorful(BrightGold)
+	cHigh := toColorful(StateBackoff)
 
 	t := 0.0
 	if maxCount > 0 {

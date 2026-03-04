@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/viewport"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 	"github.com/matt-wright86/mardi-gras/internal/gastown"
 	"github.com/matt-wright86/mardi-gras/internal/ui"
@@ -36,7 +36,7 @@ type Detail struct {
 
 // NewDetail creates a detail panel.
 func NewDetail(width, height int, issues []data.Issue) Detail {
-	vp := viewport.New(width-2, height)
+	vp := viewport.New(viewport.WithWidth(width-2), viewport.WithHeight(height))
 	return Detail{
 		AllIssues: issues,
 		IssueMap:  data.BuildIssueMap(issues),
@@ -87,8 +87,8 @@ func (d *Detail) SetComments(issueID string, comments []gastown.Comment) {
 func (d *Detail) SetSize(width, height int) {
 	d.Width = width
 	d.Height = height
-	d.Viewport.Width = width - 2
-	d.Viewport.Height = height
+	d.Viewport.SetWidth(width - 2)
+	d.Viewport.SetHeight(height)
 	if d.Issue != nil {
 		d.Viewport.SetContent(d.renderContent())
 	}

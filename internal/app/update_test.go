@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/matt-wright86/mardi-gras/internal/components"
 	"github.com/matt-wright86/mardi-gras/internal/data"
 )
@@ -157,8 +157,8 @@ func TestViewNotReady(t *testing.T) {
 
 	// Do NOT send WindowSizeMsg, so ready remains false.
 	output := m.View()
-	if !strings.Contains(output, "Loading...") {
-		t.Fatalf("expected View() to contain %q when not ready, got %q", "Loading...", output)
+	if !strings.Contains(output.Content, "Loading...") {
+		t.Fatalf("expected View() to contain %q when not ready, got %q", "Loading...", output.Content)
 	}
 }
 
@@ -173,10 +173,10 @@ func TestViewReady(t *testing.T) {
 	got := model.(Model)
 
 	output := got.View()
-	if output == "" {
+	if output.Content == "" {
 		t.Fatal("expected View() to return non-empty output when ready")
 	}
-	if strings.Contains(output, "Loading...") {
+	if strings.Contains(output.Content, "Loading...") {
 		t.Fatal("expected View() NOT to contain \"Loading...\" when ready")
 	}
 }
@@ -196,7 +196,7 @@ func TestViewWithHelp(t *testing.T) {
 	got.showHelp = true
 	helpView := got.View()
 
-	if normalView == helpView {
+	if normalView.Content == helpView.Content {
 		t.Fatal("expected View() output to differ when showHelp is true")
 	}
 }

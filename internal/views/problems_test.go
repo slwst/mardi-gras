@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/matt-wright86/mardi-gras/internal/gastown"
 )
 
@@ -77,37 +77,37 @@ func TestProblemsCursor(t *testing.T) {
 	}
 
 	// Move down
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	p, _ = p.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if p.cursor != 1 {
 		t.Fatalf("after j, cursor = %d, want 1", p.cursor)
 	}
 
 	// Move down
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	p, _ = p.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if p.cursor != 2 {
 		t.Fatalf("after j j, cursor = %d, want 2", p.cursor)
 	}
 
 	// Can't go past end
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	p, _ = p.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if p.cursor != 2 {
 		t.Fatalf("cursor should clamp at end, got %d", p.cursor)
 	}
 
 	// Move up
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	p, _ = p.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	if p.cursor != 1 {
 		t.Fatalf("after k, cursor = %d, want 1", p.cursor)
 	}
 
 	// Jump to top
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	p, _ = p.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if p.cursor != 0 {
 		t.Fatalf("after g, cursor = %d, want 0", p.cursor)
 	}
 
 	// Jump to bottom
-	p, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	p, _ = p.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	if p.cursor != 2 {
 		t.Fatalf("after G, cursor = %d, want 2", p.cursor)
 	}
@@ -139,7 +139,7 @@ func TestProblemsActionNudge(t *testing.T) {
 	}
 	p.SetProblems(problems)
 
-	p, cmd := p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	p, cmd := p.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	if cmd == nil {
 		t.Fatal("expected cmd from nudge action")
 	}
@@ -163,7 +163,7 @@ func TestProblemsActionHandoff(t *testing.T) {
 	}
 	p.SetProblems(problems)
 
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	if cmd == nil {
 		t.Fatal("expected cmd from handoff action")
 	}
@@ -184,7 +184,7 @@ func TestProblemsActionDecommission(t *testing.T) {
 	}
 	p.SetProblems(problems)
 
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'K'}})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: 'K', Text: "K"})
 	if cmd == nil {
 		t.Fatal("expected cmd from decommission action")
 	}
@@ -205,7 +205,7 @@ func TestProblemsDecommissionOnlyPolecat(t *testing.T) {
 	}
 	p.SetProblems(problems)
 
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'K'}})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: 'K', Text: "K"})
 	if cmd != nil {
 		t.Fatal("expected no cmd for decommission on non-polecat")
 	}
@@ -214,7 +214,7 @@ func TestProblemsDecommissionOnlyPolecat(t *testing.T) {
 func TestProblemsNoActionWhenEmpty(t *testing.T) {
 	p := NewProblems(100, 30)
 
-	_, cmd := p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	_, cmd := p.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	if cmd != nil {
 		t.Fatal("expected no cmd when no problems")
 	}
