@@ -225,6 +225,7 @@ Stalled issues show a "next blocker" hint so you can see at a glance what's hold
 Press `enter` on any issue to focus the detail pane. It shows everything about the selected issue:
 
 - **Metadata** — type, priority, assignee, due dates with overdue/due-soon badges
+- **Rich fields** — notes, design, and acceptance criteria fetched on demand via `bd show`
 - **Dependencies** — nine types (blocks, conditional-blocks, blocked-by, related, duplicates, supersedes, parent-child, discovered-from, depends-on) grouped by status: waiting, missing, resolved, and non-blocking
 - **Comments & Timeline** — full conversation history with timestamps
 - **Molecule DAG** — multi-step workflows rendered as a visual flow graph with parallel branching (`┌─ ├─ └─`) and connector lines between tiers
@@ -264,9 +265,14 @@ bind m display-popup -E -w 80% -h 75% -d "#{pane_current_path}" "mg"
 - `-w 80% -h 75%` sizes the popup relative to the terminal
 - `-d "#{pane_current_path}"` preserves the working directory so `mg` auto-detects the right `.beads/issues.jsonl`
 
-## Claude Code Integration
+## Agent Integration
 
-Press `a` on any selected issue to launch an interactive [Claude Code](https://claude.com/claude-code) session pre-loaded with the full issue context: title, description, notes, acceptance criteria, and dependency status.
+Press `a` on any selected issue to launch an AI agent session pre-loaded with the full issue context: title, description, notes, acceptance criteria, and dependency status.
+
+Mardi Gras supports multiple agent runtimes:
+
+- **[Claude Code](https://claude.com/claude-code)** (preferred) — detected via `claude` on PATH
+- **[Cursor](https://cursor.com)** (fallback) — detected via `cursor-agent` on PATH, launched with `-f -p` flags
 
 ### Tmux-native dispatch (multi-agent)
 
@@ -282,14 +288,14 @@ When running inside tmux, agents launch in **new tmux windows** instead of suspe
 
 ### Fallback (non-tmux)
 
-Outside tmux, the TUI suspends while Claude runs (using BubbleTea's `tea.ExecProcess`), giving Claude the full terminal. When you exit the Claude session, Mardi Gras resumes and reloads the JSONL to pick up any changes Claude made.
+Outside tmux, the TUI suspends while the agent runs (using BubbleTea's `tea.ExecProcess`), giving the agent the full terminal. When you exit the session, Mardi Gras resumes and reloads data to pick up any changes.
 
 ### Requirements
 
-- Requires `claude` on your `PATH`
-- If `claude` is not installed, the `a` key silently does nothing
+- Requires `claude` or `cursor-agent` on your `PATH`
+- If no agent runtime is found, the `a` key silently does nothing
 - Tmux dispatch requires both the `TMUX` env var and `tmux` binary on PATH
-- The prompt includes `bd update` and `bd close` hints so Claude knows how to manage the issue lifecycle
+- The prompt includes `bd update` and `bd close` hints so the agent knows how to manage the issue lifecycle
 
 ## Gas Town Integration
 
