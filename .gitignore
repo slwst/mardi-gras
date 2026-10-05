@@ -55,3 +55,6 @@ state.json
 
 # Darker sprint artifacts (ephemeral)
 .darker/
+
+# Nix build artifact
+/result
